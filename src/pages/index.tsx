@@ -1,14 +1,59 @@
 import { type NextPage } from "next";
 import { useState } from "react";
 import Head from "next/head";
-import Link from "next/link";
+import Image from "next/image";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { VscTrash, VscEdit } from "react-icons/vsc";
 import { api } from "~/utils/api";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime);
+
+const PostView = () => {
+  const { data, isLoading } = api.post.getAllPosts.useQuery();
+  if (!data) return null;
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <>
+      {data.map((post) => (
+        <div key={post.id} className="flex w-full justify-center">
+          <div className="h-auto w-full rounded-l-md bg-white p-3">
+            <div className="max-w-xs pl-2">
+              <div className="flex items-center gap-2 pb-2">
+                <h3 className="text-md max-w-[190px] overflow-hidden text-slate-600">
+                  @{post.authorId}
+                </h3>
+                <label className="text-xs text-slate-400">
+                  · {dayjs(post.createdAt).fromNow()}
+                </label>
+              </div>
+              <p>{post.content}</p>
+            </div>
+          </div>
+          <div className="flex w-10 flex-col items-end justify-start gap-3 rounded-r-md bg-white">
+            <button className="flex h-6 w-6 items-center justify-center rounded-l-full rounded-r-md bg-gradient-to-br from-[#0055f3] to-[#00c0fa] pl-1 duration-200 ease-in-out hover:w-10">
+              <VscEdit />
+            </button>
+            <button className="flex h-6 w-6 items-center justify-center rounded-l-full rounded-r-md bg-gradient-to-br from-[#ff042d] to-[#ff4b63] pl-1 duration-200 ease-in-out hover:w-10">
+              <VscTrash />
+            </button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+};
 
 const Home: NextPage = () => {
-  const [inputNews, setInputNews] = useState();
+  const [inputNews, setInputNews] = useState("");
   const { data: sessionData } = useSession();
+
+  const { mutate, isLoading } = api.post.createNewPost.useMutation({
+    onSuccess: () => {
+      setInputNews("");
+    },
+  });
 
   return (
     <>
@@ -24,20 +69,25 @@ const Home: NextPage = () => {
           </div>
           <div className="flex w-full flex-col items-start justify-center gap-10">
             {sessionData && (
-              <div className="flex flex-wrap justify-center gap-1">
-                <label className="w-full max-w-[220px] text-white">
-                  Enter news:
-                </label>
-                <div className="flex w-full flex-col">
+              <div className="flex w-full flex-wrap gap-1">
+                <label className="w-full text-white">Enter news:</label>
+                <div className="flex w-full max-w-md flex-col">
                   <input
                     type="text"
                     placeholder="..."
-                    className=" w-full max-w-xs rounded-md p-1 pl-2 focus:outline-none"
+                    value={inputNews}
+                    onChange={(e) => {
+                      setInputNews(e.target.value);
+                    }}
+                    className="rounded-md p-1 pl-2 focus:outline-none"
                   />
-                  <div className="flex w-full justify-end">
+                  <div className="flex justify-end">
                     <button
                       type="submit"
-                      className=" rounded-md bg-gradient-to-r from-[#6700f7] to-[#9248f3] p-1 px-6 font-semibold text-white duration-150 active:scale-110 "
+                      className=" rounded-md bg-gradient-to-r from-[#6700f7] to-[#9248f3] p-1 px-6 font-semibold text-white duration-200 active:scale-110"
+                      onClick={() => {
+                        mutate({ content: inputNews });
+                      }}
                     >
                       Submit
                     </button>
@@ -45,24 +95,7 @@ const Home: NextPage = () => {
                 </div>
               </div>
             )}
-            <div className="flex w-full justify-center">
-              <div className="h-auto w-full rounded-l-md bg-white ">
-                <div className="pl-2">
-                  <label className="text-xs text-slate-400">
-                    · 15 may 2024
-                  </label>
-                  <p>test</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap justify-end gap-1 rounded-r-md bg-white">
-                <button className="flex h-6 w-6 items-center justify-center rounded-l-full rounded-r-md bg-gradient-to-br from-[#0055f3] to-[#00c0fa] pl-1 duration-200 ease-in-out hover:w-10 ">
-                  <VscEdit />
-                </button>
-                <button className="flex h-6 w-6 items-center justify-center rounded-l-full rounded-r-md bg-gradient-to-br from-[#ff042d] to-[#ff4b63] pl-1 duration-200 ease-in-out hover:w-10 ">
-                  <VscTrash />
-                </button>
-              </div>
-            </div>
+            <PostView />
           </div>
         </div>
       </main>
@@ -73,23 +106,17 @@ const Home: NextPage = () => {
 export default Home;
 
 const AuthShowcase: React.FC = () => {
-  const { data: sessionData } = useSession();
-
-  const { data: secretMessage } = api.example.getSecretMessage.useQuery(
-    undefined, // no input
-    { enabled: sessionData?.user !== undefined }
-  );
-
+  const { data } = useSession();
   return (
     <div className="flex flex-col items-center justify-center gap-4">
       <p className="text-center text-xl text-white">
-        {sessionData && <span>Logged in as {sessionData.user?.name}</span>}
+        {data && <span>Logged in as {data.user?.name}</span>}
       </p>
       <button
         className="rounded-full bg-white/10 px-10 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
-        onClick={sessionData ? () => void signOut() : () => void signIn()}
+        onClick={data ? () => void signOut() : () => void signIn()}
       >
-        {sessionData ? "Sign out" : "Sign in"}
+        {data ? "Sign out" : "Sign in"}
       </button>
     </div>
   );
