@@ -16,13 +16,13 @@ const PostView = () => {
 
   return (
     <>
-      {data.map((post) => (
+      {data.map(({ author, post }) => (
         <div key={post.id} className="flex w-full justify-center">
           <div className="h-auto w-full rounded-l-md bg-white p-3">
             <div className="max-w-xs pl-2">
               <div className="flex items-center gap-2 pb-2">
-                <h3 className="text-md max-w-[190px] overflow-hidden text-slate-600">
-                  @{post.authorId}
+                <h3 className="text-md max-w-[190px] overflow-hidden font-semibold text-slate-600">
+                  @{author.name}
                 </h3>
                 <label className="text-xs text-slate-400">
                   · {dayjs(post.createdAt).fromNow()}
@@ -48,10 +48,12 @@ const PostView = () => {
 const Home: NextPage = () => {
   const [inputNews, setInputNews] = useState("");
   const { data: sessionData } = useSession();
+  const ctx = api.useContext();
 
   const { mutate, isLoading } = api.post.createNewPost.useMutation({
     onSuccess: () => {
       setInputNews("");
+      void ctx.post.getAllPosts.invalidate();
     },
   });
 

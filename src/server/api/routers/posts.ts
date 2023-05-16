@@ -4,6 +4,27 @@ import { z } from "zod";
 import { Post } from "@prisma/client";
 import { prisma } from "~/server/db";
 
+const addUserDataToPost = async (posts: Post[]) => {
+  const users = await prisma.user.findMany({
+    take: 100,
+    select: {
+      id: true,
+      name: true,
+      image: true,
+    },
+  });
+
+  return posts.map((post) => {
+    const author = users.find((user) => user.id === post.authorId);
+    if (!author)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Author for post not found",
+      });
+    return { post: post, author: author };
+  });
+};
+
 export const postRouter = createTRPCRouter({
   createNewPost: publicProcedure
     .input(z.object({ content: z.string().min(10) }))
@@ -24,6 +45,6 @@ export const postRouter = createTRPCRouter({
       orderBy: [{ createdAt: "desc" }],
     });
 
-    return posts;
+    return await addUserDataToPost(await posts);
   }),
 });
