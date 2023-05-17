@@ -3,45 +3,21 @@ import { useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { VscTrash, VscEdit } from "react-icons/vsc";
 import { api } from "~/utils/api";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-dayjs.extend(relativeTime);
+import { PostView } from "~/components/PostView";
 
-const PostView = () => {
+const Feed = () => {
   const { data, isLoading } = api.post.getAllPosts.useQuery();
+
   if (!data) return null;
   if (isLoading) return <div>Loading...</div>;
 
   return (
-    <>
-      {data.map(({ author, post }) => (
-        <div key={post.id} className="flex w-full justify-center">
-          <div className="h-auto w-full rounded-l-md bg-white p-3">
-            <div className="max-w-xs pl-2">
-              <div className="flex items-center gap-2 pb-2">
-                <h3 className="text-md max-w-[190px] overflow-hidden font-semibold text-slate-600">
-                  @{author.name}
-                </h3>
-                <label className="text-xs text-slate-400">
-                  · {dayjs(post.createdAt).fromNow()}
-                </label>
-              </div>
-              <p>{post.content}</p>
-            </div>
-          </div>
-          <div className="flex w-10 flex-col items-end justify-start gap-3 rounded-r-md bg-white">
-            <button className="flex h-6 w-6 items-center justify-center rounded-l-full rounded-r-md bg-gradient-to-br from-[#0055f3] to-[#00c0fa] pl-1 duration-200 ease-in-out hover:w-10">
-              <VscEdit />
-            </button>
-            <button className="flex h-6 w-6 items-center justify-center rounded-l-full rounded-r-md bg-gradient-to-br from-[#ff042d] to-[#ff4b63] pl-1 duration-200 ease-in-out hover:w-10">
-              <VscTrash />
-            </button>
-          </div>
-        </div>
+    <div className="scrollbar mb-10 flex flex-col gap-4 overflow-y-auto md:max-h-[600px]">
+      {data.map((fullPost) => (
+        <PostView {...fullPost} key={fullPost.post.id} />
       ))}
-    </>
+    </div>
   );
 };
 
@@ -50,7 +26,7 @@ const Home: NextPage = () => {
   const { data: sessionData } = useSession();
   const ctx = api.useContext();
 
-  const { mutate, isLoading } = api.post.createNewPost.useMutation({
+  const { mutate } = api.post.createNewPost.useMutation({
     onSuccess: () => {
       setInputNews("");
       void ctx.post.getAllPosts.invalidate();
@@ -97,7 +73,7 @@ const Home: NextPage = () => {
                 </div>
               </div>
             )}
-            <PostView />
+            <Feed />
           </div>
         </div>
       </main>

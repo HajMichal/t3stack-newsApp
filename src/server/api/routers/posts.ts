@@ -27,7 +27,7 @@ const addUserDataToPost = async (posts: Post[]) => {
 
 export const postRouter = createTRPCRouter({
   createNewPost: publicProcedure
-    .input(z.object({ content: z.string().min(10) }))
+    .input(z.object({ content: z.string().min(10).max(254) }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED" });
 
@@ -44,7 +44,30 @@ export const postRouter = createTRPCRouter({
       take: 100,
       orderBy: [{ createdAt: "desc" }],
     });
-
     return await addUserDataToPost(await posts);
   }),
+  removePost: publicProcedure
+    .input(z.object({ id: z.string().min(24).max(26) }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.post.delete({
+        where: { id: input.id },
+      });
+    }),
+  updatePost: publicProcedure
+    .input(
+      z.object({
+        postId: z.string().min(24).max(26),
+        content: z.string().min(10).max(254),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const updatePost = await ctx.prisma.post.update({
+        where: { id: input.postId },
+        data: {
+          content: input.content,
+          isEdited: true,
+        },
+      });
+      return updatePost;
+    }),
 });
